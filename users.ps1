@@ -1,31 +1,40 @@
 ﻿param(
     [Alias('d')]
-    [int]$day,
+    [int]$day,                 # необязательный, если не задан — без фильтра по дате
 
     [Alias('n')]
-    [string]$name,
+    [string]$name,             # необязательный, если не задан — без фильтра по имени (Name -like '*строка*')
 
     [Alias('e')]
     [ValidateSet('enable','disable')]
-    [string]$enabled,
+    [string]$enabled,          # enable / disable, если не задан — все
 
     [Alias('h')]
-    [switch]$help
+    [switch]$help,             # показать справку
+
+    [switch]$disable_yes       # если указан — отключить отобранных пользователей
 )
 
 if ($help) {
     Write-Host @"
 Использование:
-  .\users-date.ps1 [-d <дней>] [-n <префикс>] [-e <enable|disable>] [-h]
+  .\users-date.ps1 [-d <дней>] [-n <строка>] [-e <enable|disable>] [-disable_yes] [-h]
 
 Параметры:
-  -d  Количество дней без входа. Если не задан, фильтра по дате нет.
-  -n  Префикс поля Name (например, R76-, II-). Если не задан, все имена.
-  -e  Статус учетной записи:
-        enable  - только включенные
-        disable - только отключенные
-      Если не задан, и включенные, и отключенные.
-  -h  Показать эту справку.
+  -d            Количество дней без входа (LastLogonDate старше).
+                Если не задан, фильтра по дате нет.
+
+  -n            Строка для поиска в Name (Name -like '*строка*').
+                Если не задан, выбираются все имена.
+
+  -e            Статус учетной записи:
+                  enable  — только включенные (Enabled = True)
+                  disable — только отключенные (Enabled = False)
+                Если не задан, выводятся и включенные, и отключенные.
+
+  -disable_yes  Если указан, ВСЕ отобранные учетные записи пользователей будут отключены (Disable-ADAccount).
+
+  -h            Показать эту справку.
 "@
     return
 }
@@ -35,12 +44,13 @@ if ($day) {
 }
 
 if ($name) {
+    # подстрочный поиск по Name
     $filter = "Name -like '*$name*'"
 } else {
     $filter = '*'
 }
 
-Get-ADUser -Filter $filter -Properties LastLogonDate,Enabled |
+$users = Get-ADUser -Filter $filter -Properties LastLogonDate,Enabled |
     Where-Object {
         (-not $day     -or $_.LastLogonDate -lt $Date) -and
         (-not $enabled -or
@@ -48,6 +58,14 @@ Get-ADUser -Filter $filter -Properties LastLogonDate,Enabled |
             ($enabled -eq 'disable' -and $_.Enabled -eq $false)
         )
     } |
-    Sort-Object Name |
-    Select-Object Name,LastLogonDate,Enabled |
+    Sort-Object Name
+
+$users |
+    Select-Object Name,LastLogonDate,Enabled,DistinguishedName |
     Format-Table -AutoSize
+
+if ($disable_yes -and $users) {
+    Write-Host "`nОтключаю отобранных пользователей..." -ForegroundColor Yellow
+    $users | Disable-ADAccount
+    Write-Host "Готово." -ForegroundColor Green
+}

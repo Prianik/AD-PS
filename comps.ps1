@@ -3,51 +3,54 @@
     [int]$day,                 # необязательный, если не задан — без фильтра по дате
 
     [Alias('n')]
-    [string]$name,             # необязательный, если не задан — без префикса по имени
+    [string]$name,             # необязательный, если не задан — без фильтра по имени (Name -like '*строка*')
 
     [Alias('e')]
     [ValidateSet('enable','disable')]
     [string]$enabled,          # enable / disable, если не задан — все
 
     [Alias('h')]
-    [switch]$help              # показать справку
+    [switch]$help,             # показать справку
+
+    [switch]$disable_yes       # если указан — отключить отобранные компьютеры
 )
 
 if ($help) {
     Write-Host @"
 Использование:
-  .\comps-date.ps1 [-d <дней>] [-n <префикс>] [-e <enable|disable>] [-h]
+  .\comps-date.ps1 [-d <дней>] [-n <строка>] [-e <enable|disable>] [-disable_yes] [-h]
 
 Параметры:
-  -d  Количество дней без регистрации компьютера в домене (LastLogonDate старше).
-      Если не задан, фильтра по дате нет.
+  -d            Количество дней без регистрации компьютера в домене (LastLogonDate старше).
+                Если не задан, фильтра по дате нет.
 
-  -n  Префикс поля Name (например, R76-, II-).
-      Если не задан, выбираются все имена.
+  -n            Строка для поиска в Name (Name -like '*строка*').
+                Если не задан, выбираются все имена.
 
-  -e  Статус учетной записи компьютера:
-        enable  — только включенные (Enabled = True)
-        disable — только отключенные (Enabled = False)
-      Если не задан, выводятся и включенные, и отключенные.
+  -e            Статус учетной записи компьютера:
+                  enable  — только включенные (Enabled = True)
+                  disable — только отключенные (Enabled = False)
+                Если не задан, выводятся и включенные, и отключенные.
 
-  -h  Показать эту справку.
+  -disable_yes  Если указан, ВСЕ отобранные компьютеры будут отключены (Disable-ADAccount).
+
+  -h            Показать эту справку.
 "@
     return
 }
 
-# если задан -d, считаем дату-отсечения
 if ($day) {
     $Date = (Get-Date).AddDays(-$day)
 }
 
-# фильтр для Get-ADComputer: с префиксом или без
 if ($name) {
+    # подстрочный поиск, а не только префикс
     $filter = "Name -like '*$name*'"
 } else {
     $filter = '*'
 }
 
-Get-ADComputer -Filter $filter -Properties LastLogonDate,Enabled |
+$computers = Get-ADComputer -Filter $filter -Properties LastLogonDate,Enabled |
     Where-Object {
         (-not $day     -or $_.LastLogonDate -lt $Date) -and
         (-not $enabled -or
@@ -55,6 +58,14 @@ Get-ADComputer -Filter $filter -Properties LastLogonDate,Enabled |
             ($enabled -eq 'disable' -and $_.Enabled -eq $false)
         )
     } |
-    Sort-Object Name |
+    Sort-Object Name
+
+$computers |
     Select-Object Name,LastLogonDate,Enabled |
     Format-Table -AutoSize
+
+if ($disable_yes -and $computers) {
+    Write-Host "`nОтключаю отобранные компьютеры..." -ForegroundColor Yellow
+    $computers | Disable-ADAccount
+    Write-Host "Готово." -ForegroundColor Green
+}
