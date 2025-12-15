@@ -1,4 +1,8 @@
-﻿param(
+#установить модули
+#Install-WindowsFeature -Name RSAT-AD-PowerShell
+#Import-Module ActiveDirectory
+
+ param(
     [Alias('d')]
     [int]$day,                 # необязательный, если не задан — без фильтра по дате
 
@@ -83,3 +87,4 @@ if ($disable_yes -and $computers) {
     $computers | Disable-ADAccount
     Write-Host "Готово." -ForegroundColor Green
 }
+
