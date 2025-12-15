@@ -12,13 +12,15 @@
     [Alias('h')]
     [switch]$help,             # показать справку
 
+    [string]$export,           # путь к CSV для экспорта
+
     [switch]$disable_yes       # если указан — отключить отобранные компьютеры
 )
 
 if ($help) {
     Write-Host @"
 Использование:
-  .\comps-date.ps1 [-d <дней>] [-n <строка>] [-e <enable|disable>] [-disable_yes] [-h]
+  .\comps.ps1 [-d <дней>] [-n <строка>] [-e <enable|disable>] [-export <путь_к_csv>] [-disable_yes] [-h]
 
 Параметры:
   -d            Количество дней без регистрации компьютера в домене (LastLogonDate старше).
@@ -31,6 +33,9 @@ if ($help) {
                   enable  — только включенные (Enabled = True)
                   disable — только отключенные (Enabled = False)
                 Если не задан, выводятся и включенные, и отключенные.
+
+  -export       Путь к CSV-файлу для экспорта результата выборки.
+                Если не задан, экспорт не выполняется.
 
   -disable_yes  Если указан, ВСЕ отобранные компьютеры будут отключены (Disable-ADAccount).
 
@@ -60,13 +65,21 @@ $computers = Get-ADComputer -Filter $filter -Properties LastLogonDate,Enabled |
     } |
     Sort-Object Name
 
-$computers |
-    Select-Object Name,LastLogonDate,Enabled,DistinguishedName |
-    Format-Table -AutoSize
+# Общий объект вывода
+$out = $computers |
+    Select-Object Name,LastLogonDate,Enabled,DistinguishedName
 
+# Вывод на экран
+$out | Format-Table -AutoSize
+
+# Экспорт (если указан -export)
+if ($export -and $out) {
+    $out | Export-Csv -Path $export -NoTypeInformation -Encoding UTF8
+}
+
+# Отключение (если указан -disable_yes)
 if ($disable_yes -and $computers) {
     Write-Host "`nОтключаю отобранные компьютеры..." -ForegroundColor Yellow
     $computers | Disable-ADAccount
     Write-Host "Готово." -ForegroundColor Green
 }
-
