@@ -61,7 +61,7 @@ $computers = Get-ADComputer -Filter $filter -Properties LastLogonDate,Enabled |
     Sort-Object Name
 
 $computers |
-    Select-Object Name,LastLogonDate,Enabled |
+    Select-Object Name,LastLogonDate,Enabled,DistinguishedName |
     Format-Table -AutoSize
 
 if ($disable_yes -and $computers) {
@@ -69,3 +69,4 @@ if ($disable_yes -and $computers) {
     $computers | Disable-ADAccount
     Write-Host "Готово." -ForegroundColor Green
 }
+
