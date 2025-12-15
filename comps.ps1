@@ -1,8 +1,9 @@
 #установить модули
 #Install-WindowsFeature -Name RSAT-AD-PowerShell
 #Import-Module ActiveDirectory
+Import-Module ActiveDirectory
 
- param(
+param(
     [Alias('d')]
     [int]$day,                 # необязательный, если не задан — без фильтра по дате
 
@@ -18,13 +19,14 @@
 
     [string]$export,           # путь к CSV для экспорта
 
-    [switch]$disable_yes       # если указан — отключить отобранные компьютеры
+    [switch]$disable_yes,      # если указан — отключить отобранные компьютеры
+    [switch]$delete_yes        # если указан — удалить отобранные компьютеры
 )
 
 if ($help) {
     Write-Host @"
 Использование:
-  .\comps.ps1 [-d <дней>] [-n <строка>] [-e <enable|disable>] [-export <путь_к_csv>] [-disable_yes] [-h]
+  .\comps.ps1 [-d <дней>] [-n <строка>] [-e <enable|disable>] [-export <путь_к_csv>] [-disable_yes] [-delete_yes] [-h]
 
 Параметры:
   -d            Количество дней без регистрации компьютера в домене (LastLogonDate старше).
@@ -42,6 +44,9 @@ if ($help) {
                 Если не задан, экспорт не выполняется.
 
   -disable_yes  Если указан, ВСЕ отобранные компьютеры будут отключены (Disable-ADAccount).
+
+  -delete_yes   Если указан, ВСЕ отобранные компьютеры будут УДАЛЕНЫ из AD (Remove-ADComputer -Confirm:`$false).
+                Использовать максимально осторожно.
 
   -h            Показать эту справку.
 "@
@@ -85,6 +90,12 @@ if ($export -and $out) {
 if ($disable_yes -and $computers) {
     Write-Host "`nОтключаю отобранные компьютеры..." -ForegroundColor Yellow
     $computers | Disable-ADAccount
-    Write-Host "Готово." -ForegroundColor Green
+    Write-Host "Готово (отключение)." -ForegroundColor Green
 }
 
+# Удаление (если указан -delete_yes)
+if ($delete_yes -and $computers) {
+    Write-Host "`nВНИМАНИЕ: будут УДАЛЕНЫ отобранные компьютеры из AD..." -ForegroundColor Red
+    $computers | Remove-ADComputer -Confirm:$false
+    Write-Host "Готово (удаление)." -ForegroundColor Green
+}
