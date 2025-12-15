@@ -1,8 +1,4 @@
-#установить модули
-#Install-WindowsFeature -Name RSAT-AD-PowerShell
-#Import-Module ActiveDirectory
-
- param(
+﻿param(
     [Alias('d')]
     [int]$day,                 # необязательный, если не задан — без фильтра по дате
 
@@ -18,13 +14,14 @@
 
     [string]$export,           # путь к CSV для экспорта
 
-    [switch]$disable_yes       # если указан — отключить отобранных пользователей
+    [switch]$disable_yes,      # если указан — отключить отобранных пользователей
+    [switch]$delete_yes        # если указан — удалить отобранных пользователей
 )
 
 if ($help) {
     Write-Host @"
 Использование:
-  .\users.ps1 [-d <дней>] [-n <строка>] [-e <enable|disable>] [-export <путь_к_csv>] [-disable_yes] [-h]
+  .\users.ps1 [-d <дней>] [-n <строка>] [-e <enable|disable>] [-export <путь_к_csv>] [-disable_yes] [-delete_yes] [-h]
 
 Параметры:
   -d            Количество дней без входа (LastLogonDate старше).
@@ -42,6 +39,9 @@ if ($help) {
                 Если не задан, экспорт не выполняется.
 
   -disable_yes  Если указан, ВСЕ отобранные учетные записи пользователей будут отключены (Disable-ADAccount).
+
+  -delete_yes   Если указан, ВСЕ отобранные учетные записи пользователей будут УДАЛЕНЫ из AD (Remove-ADUser -Confirm:`$false).
+                Использовать максимально осторожно.
 
   -h            Показать эту справку.
 "@
@@ -85,6 +85,12 @@ if ($export -and $out) {
 if ($disable_yes -and $users) {
     Write-Host "`nОтключаю отобранных пользователей..." -ForegroundColor Yellow
     $users | Disable-ADAccount
-    Write-Host "Готово." -ForegroundColor Green
+    Write-Host "Готово (отключение)." -ForegroundColor Green
 }
 
+# Удаление (если указан -delete_yes)
+if ($delete_yes -and $users) {
+    Write-Host "`nВНИМАНИЕ: будут УДАЛЕНЫ отобранные учетные записи пользователей из AD..." -ForegroundColor Red
+    $users | Remove-ADUser -Confirm:$false
+    Write-Host "Готово (удаление)." -ForegroundColor Green
+}

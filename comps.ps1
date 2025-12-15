@@ -1,7 +1,4 @@
-#установить модули
-#Install-WindowsFeature -Name RSAT-AD-PowerShell
-#Import-Module ActiveDirectory
-param(
+﻿param(
     [Alias('d')]
     [int]$day,                 # необязательный, если не задан — без фильтра по дате
 
@@ -97,4 +94,3 @@ if ($delete_yes -and $computers) {
     $computers | Remove-ADComputer -Confirm:$false
     Write-Host "Готово (удаление)." -ForegroundColor Green
 }
-
