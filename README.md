@@ -58,8 +58,7 @@
 Открой PowerShell **от имени администратора** и выполни:
 
 ```powershell
-Get-WindowsCapability -Name RSAT.ActiveDirectory* -Online |
-    Add-WindowsCapability -Online
+Get-WindowsCapability -Name RSAT.ActiveDirectory* -Online | Add-WindowsCapability -Online
 ```
 
 После окончания установки перезапусти PowerShell и проверь:
@@ -69,14 +68,13 @@ Import-Module ActiveDirectory
 Get-ADComputer -Filter * -ResultSetSize 1
 ```
 
-Если команда отрабатывает без ошибок, можно запускать `comps.ps1` и `users.ps1`.[^1][^2]
+Если команда отрабатывает без ошибок, можно запускать `comps.ps1` и `users.ps1`.
 
 Альтернатива поставить все RSAT:
 
 ```powershell
 Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online
 ```
-
 
 ## Windows Server (если запускаешь на сервере)
 
